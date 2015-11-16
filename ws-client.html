@@ -1,0 +1,81 @@
+<html>
+  <head>
+    <script src="../js/jquery-1.11.2.js"></script>
+    <script>
+      var username="qiusugang";
+      var passwd="qws123455";
+      var channel="274";
+      function init() {
+        function debug(string) {
+          var element = document.getElementById("debug");
+          var p = document.createElement("p");
+          p.appendChild(document.createTextNode(string));
+          element.appendChild(p);
+        }
+
+        var ws = new WebSocket("ws://test.ircserver.com:6789/");
+        
+        ws.onmessage = function(event) { 
+          debug("Received: " + event.data);
+          var msg = event.data.replace(/[\r\n]/g, "");
+          var result = /^(:[^ ]+ )?([^ ]+) (.*)$/.exec(msg);
+          var origin, command, data;
+            
+          try {
+            origin = result[1] || "";
+            command = result[2] || "";
+            data = result[3] || "";
+          } catch (e) { }
+          
+          switch (command) {
+            case "PING" :
+              ws.send("PONG :" + data + "\r\n");
+              break;
+            case "444" :
+               debug("wrong username or password");
+               break;
+            case "265" :
+               // /^265 +([^ ]+) +:(.*): +(\d*) +/
+              break;
+            case "366" :
+              // /^366 +([^ ]+) +([^ ]+) :(.*)$/
+              var array = [];
+              if (data.length > 0){
+                array = data.split(" ");
+                channel = array[1];
+              }
+              ws.send("JOINED "+ channel + "\r\n");
+              break;
+            case "001" :
+              debug("login success!");
+              break;
+            case "PRIVMSG":
+              var messages = /^(\d*) :(.*)$/.exec(data);
+              debug("Message ID: " + messages[1]);
+              debug("Content: " + messages[2]);
+              jobj = $.parseJSON(messages[2]);
+              ws.send("RECEIVEDID " + messages[1] + "\r\n");
+              debug("message: " + jobj.content);
+              break;
+            default:
+              break;
+            }          
+        };
+        
+        ws.onclose = function(event) {
+          debug("Closed - code: " + event.code + ", reason: " + event.reason + ", wasClean: " + event.wasClean);
+        };
+        
+        ws.onopen = function() {
+          debug("connected...");
+          ws.send("USER ggggggggggg test.webserver.com :livechat test.webserver.com\r\n");
+          ws.send("NICK " + username + " " + passwd + "\r\n");
+          ws.send("JION " + channel + "\r\n");
+        };
+      };
+    </script>
+  </head>
+  <body onload="init();">
+    <div id="debug"></div>
+  </body>
+</html>
